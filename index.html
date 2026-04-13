@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Frayt — فراطة</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%230F766E'/%3E%3Ctext x='12' y='17' text-anchor='middle' font-size='14' fill='%23FCD34D' font-family='Arial' font-weight='bold'%3Eف%3C/text%3E%3C/svg%3E"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="config.js"></script>
+<style>
+  body { font-family: 'Inter', 'Cairo', sans-serif; background:#E5E7EB; }
+  [dir="rtl"] body, [dir="rtl"] * { font-family: 'Cairo', 'Inter', sans-serif; }
+  html, body { overflow-x: hidden; }
+  /* Mobile: phone fills viewport. Tablet+: fixed device-frame mockup. */
+  .phone {
+    width: 100%; height: calc(100vh - 60px);
+    background: white;
+    border-radius: 0; border: 0; box-shadow: none;
+    overflow: hidden; position: relative;
+  }
+  .notch { display: none; }
+  @media (min-width: 640px) {
+    .phone {
+      width: 375px; height: 760px;
+      border-radius: 40px;
+      border: 8px solid #111;
+      box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    }
+    .notch {
+      display: block;
+      position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 140px; height: 24px; background: #111;
+      border-radius: 0 0 16px 16px; z-index: 50;
+    }
+  }
+  .fade-in { animation: fi .35s ease-out; }
+  @keyframes fi { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  .pop { animation: pop .5s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes pop { 0%{transform:scale(.6);opacity:0} 60%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
+  .pulse-ring { animation: pr 1.8s ease-out infinite; }
+  @keyframes pr { 0%{transform:scale(.9);opacity:.8} 100%{transform:scale(1.4);opacity:0} }
+  .slide-up { animation: su .3s ease-out; }
+  @keyframes su { from { transform:translateY(100%); } to { transform:translateY(0); } }
+  .shine { background: linear-gradient(135deg, #0F766E 0%, #14857C 50%, #0F766E 100%); }
+  .coin { background: radial-gradient(circle at 30% 30%, #FCD34D, #F59E0B 70%); }
+  .confetti { position:absolute; width:8px; height:14px; top:-20px; animation: fall 1.8s ease-out forwards; }
+  @keyframes fall {
+    0% { transform: translateY(0) rotate(0); opacity:1; }
+    100% { transform: translateY(720px) rotate(540deg); opacity:0; }
+  }
+  .ring-bg { stroke:#E2E8F0; } .ring-fg { stroke:#0F766E; transition: stroke-dashoffset 1s ease-out; }
+  .hide-scroll::-webkit-scrollbar { display:none; } .hide-scroll { -ms-overflow-style:none; scrollbar-width:none; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo } = React;
+
+// ---------- i18n ----------
+const T = {
+  en: {
+    welcome_title:"Frayt", welcome_sub:"Turn your spare change into savings and rewards",
+    feat1:"No more lost coins", feat2:"Savings that grow automatically", feat3:"Rewards you can redeem",
+    get_started:"Get Started", continue:"Continue",
+    otp_title:"Enter verification code", otp_sub:"We sent a 4-digit code to +962 79 ••• 4821", resend:"Resend code",
+    home_hi:"Hello, Leen", home_balance:"Frayt Balance", home_today:"today",
+    scan_receive:"Scan to receive change", pay_with_frayt:"Pay with Frayt",
+    savings_jar:"Savings Jar", rewards_pts:"Rewards Points", redeem:"Redeem",
+    recent:"Recent Activity", no_tx:"No transactions yet",
+    scan_title:"Point camera at merchant QR", scan_hint:"Tap QR to simulate scan",
+    success_title:"Change received!", success_sub:"added to your wallet",
+    done:"Done", back_home:"Back to home",
+    m_title:"Merchant POS", m_store:"Cafe Solo",
+    m_amount:"Amount due", m_paid:"Customer paid",
+    m_change:"Change to send via Frayt", m_generate:"Generate Frayt QR",
+    m_waiting:"Waiting for customer scan…", m_received:"Change sent!",
+    m_new_tx:"New transaction", m_simulate:"Simulate customer scan",
+    m_today:"Today's Frayt transactions", m_count:"transactions", m_total:"total sent",
+    customer_view:"Customer", merchant_view:"Merchant", demo_view:"Split Demo",
+    demo_label_c:"Customer Phone", demo_label_m:"Merchant Phone",
+    incoming_title:"Incoming Frayt", incoming_sub:"Tap to scan and receive",
+    jod:"JOD", pts:"pts",
+    tab_home:"Home", tab_activity:"Activity", tab_savings:"Savings", tab_profile:"Profile",
+    activity_title:"Activity", filter_all:"All", filter_in:"Received", filter_out:"Sent", filter_rewards:"Rewards",
+    savings_title:"Savings", savings_goal:"Eid Goal", savings_of:"of", savings_saved:"saved",
+    auto_save:"Auto-save change", deposit_history:"Deposits",
+    profile_title:"Profile", p_phone:"Phone", p_lang:"Language", p_help:"Help & Support", p_logout:"Log out",
+    redeem_title:"Redeem Rewards", redeem_sub:"Your points",
+    reward_coffee:"Free coffee", reward_voucher:"1 JOD voucher", reward_discount:"10% off", reward_charity:"Donate to charity",
+    pay_title:"Pay with Frayt", pay_select_cat:"Select a category", pay_select_biller:"Select provider",
+    pay_ref_placeholder:"Enter reference", pay_fetch:"Fetch bill", pay_fetching:"Loading bill…",
+    pay_bill_amount:"Bill amount", pay_due:"Due date", pay_pay_now:"Pay now",
+    pay_success:"Bill paid!", pay_receipt:"Receipt", pay_new:"Pay another bill", pay_back_home:"Back to home",
+    pay_balance:"Your Frayt balance", pay_insufficient:"Insufficient balance",
+    cat_electricity:"Electricity", cat_water:"Water", cat_mobile:"Mobile", cat_internet:"Internet", cat_education:"Education", cat_government:"Government",
+    pay_saved:"My bills", pay_recent:"Recent", pay_tap_pay:"Tap to pay again", pay_all_cats:"All categories",
+    pay_search:"Search providers…",
+    pay_save:"Save for next time", pay_save_q:"Save this biller?", pay_nickname:"Nickname (e.g. Home JEPCO)", pay_save_btn:"Save", pay_saved_ok:"Saved ✓", pay_already_saved:"Already saved",
+    pay_due_today:"Due today", pay_due_overdue:"Overdue", pay_due_soon:"Due soon", pay_days_left:"days left",
+    pay_delete:"Remove",
+    tx_coffee:"Cafe Solo", tx_super:"Super Store", tx_gas:"Manaseer Gas", tx_pharma:"Al-Dawaa Pharmacy", tx_just:"Just now", tx_yday:"Yesterday", tx_2d:"2 days ago", tx_3d:"3 days ago",
+    goal_label:"Eid 2026",
+  },
+  ar: {
+    welcome_title:"فراطة", welcome_sub:"حوّل فراطتك إلى مدخرات ومكافآت",
+    feat1:"لا فراطة ضائعة بعد اليوم", feat2:"ادخار ينمو تلقائيًا", feat3:"مكافآت يمكنك استبدالها",
+    get_started:"ابدأ الآن", continue:"متابعة",
+    otp_title:"أدخل رمز التحقق", otp_sub:"أرسلنا رمزاً من ٤ أرقام إلى ٤٨٢١ ••• ٧٩ ٩٦٢+", resend:"إعادة إرسال",
+    home_hi:"مرحبًا، لين", home_balance:"رصيد فراطة", home_today:"اليوم",
+    scan_receive:"امسح لاستلام الفراطة", pay_with_frayt:"ادفع بفراطة",
+    savings_jar:"جرة الادخار", rewards_pts:"نقاط المكافآت", redeem:"استبدل",
+    recent:"الحركات الأخيرة", no_tx:"لا توجد حركات بعد",
+    scan_title:"وجّه الكاميرا إلى رمز التاجر", scan_hint:"انقر على الرمز لمحاكاة المسح",
+    success_title:"تم استلام الفراطة!", success_sub:"أُضيفت إلى محفظتك",
+    done:"تم", back_home:"الرئيسية",
+    m_title:"نقطة بيع التاجر", m_store:"كافيه سولو",
+    m_amount:"المبلغ المستحق", m_paid:"دفع الزبون",
+    m_change:"الفراطة المرسلة عبر فراطة", m_generate:"أنشئ رمز فراطة",
+    m_waiting:"بانتظار مسح الزبون…", m_received:"تم إرسال الفراطة!",
+    m_new_tx:"عملية جديدة", m_simulate:"محاكاة مسح الزبون",
+    m_today:"عمليات فراطة اليوم", m_count:"عمليات", m_total:"إجمالي الإرسال",
+    customer_view:"الزبون", merchant_view:"التاجر", demo_view:"عرض مزدوج",
+    demo_label_c:"هاتف الزبون", demo_label_m:"هاتف التاجر",
+    incoming_title:"فراطة واردة", incoming_sub:"اضغط للمسح والاستلام",
+    jod:"د.أ", pts:"نقطة",
+    tab_home:"الرئيسية", tab_activity:"الحركات", tab_savings:"الادخار", tab_profile:"الحساب",
+    activity_title:"الحركات", filter_all:"الكل", filter_in:"واردة", filter_out:"صادرة", filter_rewards:"مكافآت",
+    savings_title:"الادخار", savings_goal:"هدف العيد", savings_of:"من", savings_saved:"تم ادخارها",
+    auto_save:"ادخار تلقائي للفراطة", deposit_history:"الإيداعات",
+    profile_title:"الحساب", p_phone:"الهاتف", p_lang:"اللغة", p_help:"المساعدة والدعم", p_logout:"تسجيل خروج",
+    redeem_title:"استبدل المكافآت", redeem_sub:"نقاطك",
+    reward_coffee:"قهوة مجانية", reward_voucher:"قسيمة ١ د.أ", reward_discount:"خصم ١٠٪", reward_charity:"تبرع لجمعية خيرية",
+    pay_title:"ادفع بفراطة", pay_select_cat:"اختر الفئة", pay_select_biller:"اختر الجهة",
+    pay_ref_placeholder:"أدخل الرقم المرجعي", pay_fetch:"استرجاع الفاتورة", pay_fetching:"جاري التحميل…",
+    pay_bill_amount:"قيمة الفاتورة", pay_due:"تاريخ الاستحقاق", pay_pay_now:"ادفع الآن",
+    pay_success:"تم دفع الفاتورة!", pay_receipt:"الإيصال", pay_new:"ادفع فاتورة أخرى", pay_back_home:"الرئيسية",
+    pay_balance:"رصيدك في فراطة", pay_insufficient:"الرصيد غير كافٍ",
+    cat_electricity:"الكهرباء", cat_water:"المياه", cat_mobile:"الخلوي", cat_internet:"الإنترنت", cat_education:"التعليم", cat_government:"الحكومة",
+    pay_saved:"فواتيري", pay_recent:"الأخيرة", pay_tap_pay:"اضغط للدفع مجددًا", pay_all_cats:"كل الفئات",
+    pay_search:"ابحث عن الجهة…",
+    pay_save:"احفظ للمرة القادمة", pay_save_q:"حفظ هذه الجهة؟", pay_nickname:"الاسم المختصر (مثلاً: كهرباء البيت)", pay_save_btn:"احفظ", pay_saved_ok:"تم الحفظ ✓", pay_already_saved:"محفوظة مسبقًا",
+    pay_due_today:"مستحقة اليوم", pay_due_overdue:"متأخرة", pay_due_soon:"قريبة الاستحقاق", pay_days_left:"أيام متبقية",
+    pay_delete:"حذف",
+    tx_coffee:"كافيه سولو", tx_super:"السوبر ماركت", tx_gas:"محطة المناصير", tx_pharma:"صيدلية الدواء", tx_just:"الآن", tx_yday:"أمس", tx_2d:"قبل يومين", tx_3d:"قبل ٣ أيام",
+    goal_label:"عيد ٢٠٢٦",
+  }
+};
+
+// ---------- Icons ----------
+const Icon = ({d, c="w-6 h-6", s=2}) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={s} strokeLinecap="round" strokeLinejoin="round" className={c}>{d}</svg>;
+const I = {
+  qr: (c)=> <Icon c={c} d={<><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1"/></>}/>,
+  send: (c)=> <Icon c={c} d={<><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></>}/>,
+  jar: (c)=> <Icon c={c} d={<><path d="M6 8h12v11a2 2 0 01-2 2H8a2 2 0 01-2-2V8z"/><path d="M8 8V5a2 2 0 012-2h4a2 2 0 012 2v3"/></>}/>,
+  gift: (c)=> <Icon c={c} d={<><rect x="3" y="8" width="18" height="4"/><path d="M12 8v13M19 12v9H5v-9M7.5 8a2.5 2.5 0 010-5C9 3 10 4 12 8c2-4 3-5 4.5-5a2.5 2.5 0 010 5"/></>}/>,
+  home: (c)=> <Icon c={c} d={<><path d="M3 9.5L12 3l9 6.5V21a1 1 0 01-1 1h-5v-7h-6v7H4a1 1 0 01-1-1V9.5z"/></>}/>,
+  list: (c)=> <Icon c={c} d={<><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></>}/>,
+  user: (c)=> <Icon c={c} d={<><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></>}/>,
+  arrow: (c)=> <Icon c={c} d={<><path d="M5 12h14M13 5l7 7-7 7"/></>}/>,
+  check: (c)=> <Icon c={c} s={3} d={<><path d="M20 6L9 17l-5-5"/></>}/>,
+  close: (c)=> <Icon c={c} d={<><path d="M18 6L6 18M6 6l12 12"/></>}/>,
+  coffee: (c)=> <Icon c={c} d={<><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M3 8h15v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/><path d="M6 2v2M10 2v2M14 2v2"/></>}/>,
+  ticket: (c)=> <Icon c={c} d={<><path d="M3 7a2 2 0 012-2h14a2 2 0 012 2v3a2 2 0 000 4v3a2 2 0 01-2 2H5a2 2 0 01-2-2v-3a2 2 0 000-4V7z"/><path d="M13 5v14"/></>}/>,
+  percent: (c)=> <Icon c={c} d={<><path d="M19 5L5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></>}/>,
+  heart: (c)=> <Icon c={c} d={<><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 10-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 000-7.6z"/></>}/>,
+};
+
+// ---------- Animated number ----------
+function AnimNum({ value, className, decimals=2 }) {
+  const [v, setV] = useState(value);
+  useEffect(() => {
+    const start = v, delta = value - start, dur = 600, t0 = performance.now();
+    let raf; const tick = (t) => { const p = Math.min(1, (t-t0)/dur); const e = 1-Math.pow(1-p,3); setV(start + delta*e); if (p<1) raf = requestAnimationFrame(tick); };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return <span className={className}>{v.toFixed(decimals)}</span>;
+}
+
+// ---------- Confetti ----------
+function Confetti() {
+  const pieces = useMemo(() => Array.from({length:30}).map((_,i)=>({
+    left: Math.random()*100, delay: Math.random()*0.6,
+    color: ['#0F766E','#F59E0B','#FCD34D','#14857C'][i%4],
+    dur: 1.4+Math.random()*0.8,
+  })), []);
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden z-40">
+      {pieces.map((p,i)=>(
+        <div key={i} className="confetti" style={{left:`${p.left}%`, background:p.color, animationDelay:`${p.delay}s`, animationDuration:`${p.dur}s`}}/>
+      ))}
+    </div>
+  );
+}
+
+// ---------- Mock QR ----------
+const MockQR = ({size=200, onClick}) => {
+  const cells = useMemo(() => {
+    const g=21, arr=[]; let s=123;
+    for (let y=0;y<g;y++) for (let x=0;x<g;x++){ s=(s*9301+49297)%233280; arr.push({x,y,on:(s/233280)>0.5}); }
+    const mark=(ox,oy)=>{ for(let y=0;y<7;y++) for(let x=0;x<7;x++){ const i=(oy+y)*g+(ox+x); if(i<arr.length){ const edge=x===0||y===0||x===6||y===6; const center=x>=2&&x<=4&&y>=2&&y<=4; arr[i].on=edge||center; } } };
+    mark(0,0); mark(14,0); mark(0,14); return arr;
+  }, []);
+  return (
+    <svg onClick={onClick} viewBox="0 0 21 21" width={size} height={size} className={onClick?"cursor-pointer":""}>
+      <rect width="21" height="21" fill="white"/>
+      {cells.map((c,i)=>c.on && <rect key={i} x={c.x} y={c.y} width="1" height="1" fill="#0F766E"/>)}
+    </svg>
+  );
+};
+
+// ---------- API client ----------
+// Allow override via URL hash (?api=https://...) or window.FRAYT_CONFIG; fallback to localhost for dev
+const API_BASE = (window.FRAYT_CONFIG && window.FRAYT_CONFIG.apiBase) || 'http://localhost:3001/api';
+const MERCHANT_KEY = (window.FRAYT_CONFIG && window.FRAYT_CONFIG.merchantKey) || 'demo-merchant-key';
+const DEMO_PHONE = '+962791114821';
+
+async function apiCall(path, { method='GET', body, token, merchantKey } = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers.Authorization = 'Bearer ' + token;
+  if (merchantKey) headers['x-merchant-key'] = merchantKey;
+  const res = await fetch(API_BASE + path, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+const api = {
+  health: () => apiCall('/health'),
+  requestOtp: (phone) => apiCall('/auth/request-otp', { method:'POST', body:{phone} }),
+  verifyOtp: (phone, otp) => apiCall('/auth/verify-otp', { method:'POST', body:{phone, otp} }),
+  wallet: (token) => apiCall('/wallet', { token }),
+  merchantQr: (amount, paid) => apiCall('/merchant/qr', { method:'POST', body:{amount, paid}, merchantKey: MERCHANT_KEY }),
+  merchantToday: () => apiCall('/merchant/today', { merchantKey: MERCHANT_KEY }),
+  scan: (qrId, token) => apiCall('/scan', { method:'POST', body:{qrId}, token }),
+  redeem: (rewardId, token) => apiCall('/redeem', { method:'POST', body:{rewardId}, token }),
+  billers: () => apiCall('/billers'),
+  billLookup: (billerId, reference, token) => apiCall('/bills/lookup', { method:'POST', body:{billerId, reference}, token }),
+  billPay: (billId, token) => apiCall('/bills/pay', { method:'POST', body:{billId}, token }),
+  savedBillers: (token) => apiCall('/saved-billers', { token }),
+  saveBiller: (billerId, nickname, reference, token) => apiCall('/saved-billers', { method:'POST', body:{billerId, nickname, reference}, token }),
+  deleteSavedBiller: (id, token) => apiCall('/saved-billers/'+id, { method:'DELETE', token }),
+  recentBills: (token) => apiCall('/bills/recent', { token }),
+};
+
+// ---------- App ----------
+function App() {
+  const [lang, setLang] = useState('en');
+  const [view, setView] = useState('customer');
+  const [screen, setScreen] = useState('welcome'); // welcome|otp|app|scan|success
+  const [tab, setTab] = useState('home');
+  const [mScreen, setMScreen] = useState('amount');
+  const [balance, setBalance] = useState(3.65);
+  const [savings, setSavings] = useState(12.40);
+  const [goal] = useState(20);
+  const [points, setPoints] = useState(340);
+  const [today, setToday] = useState(0.15);
+  const [lastReceive, setLastReceive] = useState(0.35);
+  const [confetti, setConfetti] = useState(false);
+  const [amount, setAmount] = useState('9.65');
+  const [paid, setPaid] = useState('10.00');
+  const [otp, setOtp] = useState(['','','','']);
+  const [redeemOpen, setRedeemOpen] = useState(false);
+  const [filter, setFilter] = useState('all');
+  const [mCount, setMCount] = useState(14);
+  const [mTotal, setMTotal] = useState(4.85);
+  const [pendingChange, setPendingChange] = useState(null);
+  const [apiOnline, setApiOnline] = useState(null); // null=checking, true=online, false=offline
+  const [token, setToken] = useState(null);
+  const [qrId, setQrId] = useState(null);
+  const [qrDataUrl, setQrDataUrl] = useState(null);
+  const [tx, setTx] = useState([
+    { type:'in', name:'tx_coffee', amt:0.35, time:'tx_just' },
+    { type:'in', name:'tx_super', amt:0.80, time:'tx_yday' },
+    { type:'rewards', name:'reward_coffee', amt:-100, time:'tx_yday' },
+    { type:'in', name:'tx_gas', amt:1.25, time:'tx_2d' },
+    { type:'in', name:'tx_pharma', amt:0.45, time:'tx_3d' },
+  ]);
+  const t = T[lang];
+  const rtl = lang === 'ar';
+  const change = Math.max(0, +(parseFloat(paid||0) - parseFloat(amount||0)).toFixed(2));
+
+  useEffect(() => { document.documentElement.dir = rtl?'rtl':'ltr'; document.documentElement.lang = lang; }, [lang, rtl]);
+  useEffect(() => { if (view==='demo' && (screen==='welcome'||screen==='otp')) setScreen('app'); }, [view]);
+
+  // Check API health on mount, also poll merchant today count periodically
+  useEffect(() => {
+    let alive = true;
+    api.health().then(() => { if (alive) setApiOnline(true); }).catch(() => { if (alive) setApiOnline(false); });
+    return () => { alive = false; };
+  }, []);
+
+  // Load wallet from API whenever token changes
+  useEffect(() => {
+    if (!token) return;
+    api.wallet(token).then(w => {
+      setBalance(w.balance);
+      setSavings(w.savings);
+      setPoints(w.points);
+      setToday(w.today);
+      // Map API tx format to frontend format
+      const mapped = w.transactions.map(t => ({
+        type: t.type,
+        name: t.meta,
+        amt: t.amount,
+        time: new Date(t.created_at).toLocaleString(lang==='ar'?'ar-JO':'en-JO', { hour:'2-digit', minute:'2-digit', day:'2-digit', month:'short' }),
+      }));
+      setTx(mapped);
+    }).catch(err => console.warn('wallet load failed', err.message));
+  }, [token]);
+
+  // Refresh merchant today from API when view changes to merchant or demo
+  useEffect(() => {
+    if (!apiOnline) return;
+    if (view !== 'merchant' && view !== 'demo') return;
+    api.merchantToday().then(d => { setMCount(d.count); setMTotal(d.total); }).catch(()=>{});
+  }, [view, apiOnline]);
+
+  const net = { apiOnline, token, setToken, qrId, setQrId, qrDataUrl, setQrDataUrl };
+
+  const receiveChange = (amt) => {
+    const half = +(amt/2).toFixed(2);
+    setBalance(b => +(b+half).toFixed(2));
+    setSavings(s => +(s+half).toFixed(2));
+    setPoints(p => p + Math.round(amt*100));
+    setToday(tdy => +(tdy+amt).toFixed(2));
+    setLastReceive(amt);
+    setTx(arr => [{ type:'in', name:'tx_coffee', amt, time:'tx_just' }, ...arr]);
+    setConfetti(true); setTimeout(()=>setConfetti(false), 2000);
+  };
+
+  const redeem = async (cost, name, rewardKey) => {
+    if (points < cost) return;
+    if (apiOnline && token) {
+      try {
+        const r = await api.redeem(rewardKey, token);
+        setPoints(r.wallet.points);
+        setTx(arr => [{ type:'rewards', name, amt:-cost, time:'tx_just' }, ...arr]);
+        setRedeemOpen(false);
+        return;
+      } catch (e) { console.warn('redeem api failed, local fallback', e.message); }
+    }
+    setPoints(p => p - cost);
+    setTx(arr => [{ type:'rewards', name, amt:-cost, time:'tx_just' }, ...arr]);
+    setRedeemOpen(false);
+  };
+
+  const resetToWelcome = () => { setScreen('welcome'); setTab('home'); setOtp(['','','','']); };
+
+  return (
+    <div className="min-h-screen flex flex-col items-stretch sm:items-center sm:py-6 sm:px-4 sm:gap-4" dir={rtl?'rtl':'ltr'}>
+      <div className="sticky top-0 z-40 w-full sm:w-auto bg-slate-100/90 backdrop-blur sm:bg-transparent sm:backdrop-blur-0 py-2 sm:py-0 flex flex-col items-center gap-2 border-b border-slate-200 sm:border-0">
+      <div className={`flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1 rounded-full ${apiOnline===true?'bg-emerald-50 text-emerald-700':apiOnline===false?'bg-amber-50 text-amber-700':'bg-slate-100 text-slate-500'}`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${apiOnline===true?'bg-emerald-500 animate-pulse':apiOnline===false?'bg-amber-500':'bg-slate-400'}`}></span>
+        {apiOnline===true?'API Connected':apiOnline===false?'API Offline (local mode)':'Checking API…'}
+      </div>
+      <div className="flex gap-2 items-center bg-white rounded-full shadow-md p-1.5">
+        <button onClick={()=>setLang(lang==='en'?'ar':'en')} className="px-4 py-1.5 rounded-full text-sm font-semibold bg-slate-100 hover:bg-slate-200">
+          {lang==='en' ? 'العربية' : 'English'}
+        </button>
+        <div className="flex bg-slate-100 rounded-full p-1 text-xs font-semibold">
+          <button onClick={()=>setView('customer')} className={`px-3 py-1 rounded-full ${view==='customer'?'bg-teal-600 text-white':'text-slate-600'}`}>{t.customer_view}</button>
+          <button onClick={()=>setView('merchant')} className={`px-3 py-1 rounded-full ${view==='merchant'?'bg-teal-600 text-white':'text-slate-600'}`}>{t.merchant_view}</button>
+          <button onClick={()=>setView('demo')} className={`px-3 py-1 rounded-full ${view==='demo'?'bg-teal-600 text-white':'text-slate-600'}`}>{t.demo_view}</button>
+        </div>
+      </div>
+      </div>{/* /sticky controls */}
+
+      {view === 'demo' ? (
+        <div className="flex flex-row flex-wrap justify-center items-start gap-6 max-w-full">
+          <div className="flex flex-col items-center gap-2">
+            <div className="phone">
+              <div className="notch"></div>
+              <CustomerRoot {...{t, rtl, screen, setScreen, tab, setTab, balance, savings, goal, points, today, lastReceive, tx, otp, setOtp, receiveChange, redeemOpen, setRedeemOpen, redeem, filter, setFilter, confetti, resetToWelcome, lang, setLang, pendingChange, setPendingChange, demoMode:true, setMScreen, setMCount, setMTotal, setBalance, setSavings, setPoints, setToday, setTx, setLastReceive, setConfetti, ...net}}/>
+              {confetti && screen==='success' && <Confetti/>}
+            </div>
+            <p className="text-xs font-semibold text-slate-500">📱 {t.demo_label_c}</p>
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <div className="phone">
+              <div className="notch"></div>
+              <MerchantFlow {...{t, rtl, mScreen, setMScreen, amount, setAmount, paid, setPaid, change, mCount, setMCount, mTotal, setMTotal, demoMode:true, setPendingChange, ...net}}/>
+            </div>
+            <p className="text-xs font-semibold text-slate-500">🏪 {t.demo_label_m}</p>
+          </div>
+        </div>
+      ) : (
+        <div className="phone">
+          <div className="notch"></div>
+          {view === 'customer' ? (
+            <CustomerRoot {...{t, rtl, screen, setScreen, tab, setTab, balance, savings, goal, points, today, lastReceive, tx, otp, setOtp, receiveChange, redeemOpen, setRedeemOpen, redeem, filter, setFilter, confetti, resetToWelcome, lang, setLang, pendingChange, setPendingChange, demoMode:false, setBalance, setSavings, setPoints, setToday, setTx, setLastReceive, setConfetti, ...net}}/>
+          ) : (
+            <MerchantFlow {...{t, rtl, mScreen, setMScreen, amount, setAmount, paid, setPaid, change, mCount, setMCount, mTotal, setMTotal, demoMode:false, setPendingChange, ...net}}/>
+          )}
+          {confetti && view==='customer' && screen==='success' && <Confetti/>}
+        </div>
+      )}
+
+      <p className="hidden sm:block text-xs text-slate-500 mt-2">{rtl?'فراطة':'Frayt'}</p>
+    </div>
+  );
+}
+
+// ---------- Customer Root (flows + tabs) ----------
+function CustomerRoot(p) {
+  const { screen } = p;
+  return (
+    <div className="w-full h-full bg-slate-50 relative overflow-hidden">
+      {screen === 'welcome' && <Welcome t={p.t} onNext={()=>p.setScreen('otp')} />}
+      {screen === 'otp' && <Otp {...p} onNext={async () => {
+        if (p.apiOnline) {
+          try {
+            await api.requestOtp(DEMO_PHONE);
+            const r = await api.verifyOtp(DEMO_PHONE, '1234');
+            p.setToken(r.token);
+          } catch (e) { console.warn('auth failed', e.message); }
+        }
+        p.setScreen('app');
+      }} />}
+      {screen === 'app' && <AppTabs {...p} />}
+      {screen === 'pay' && <PayFlow {...p} />}
+      {screen === 'scan' && <Scan t={p.t} qrDataUrl={p.qrDataUrl} onScan={async ()=>{
+        const amt = p.pendingChange ?? 0.35;
+        // Try real API scan if we have a live qrId + token
+        if (p.apiOnline && p.token && p.qrId) {
+          try {
+            const r = await api.scan(p.qrId, p.token);
+            p.setBalance(r.wallet.balance);
+            p.setSavings(r.wallet.savings);
+            p.setPoints(r.wallet.points);
+            p.setToday(tdy => +(tdy + r.received).toFixed(2));
+            p.setLastReceive ? p.setLastReceive(r.received) : null;
+            p.setTx(arr => [{ type:'in', name:'Cafe Solo', amt:r.received, time:'tx_just' }, ...arr]);
+            p.setConfetti && p.setConfetti(true);
+            setTimeout(()=>p.setConfetti && p.setConfetti(false), 2000);
+            if (p.demoMode) {
+              p.setMScreen('done');
+              p.setMCount(c=>c+1);
+              p.setMTotal(v=>+(v+r.received).toFixed(2));
+              p.setPendingChange(null);
+            }
+            p.setQrId(null); p.setQrDataUrl(null);
+            p.setScreen('success');
+            return;
+          } catch (e) { console.warn('scan api failed, local fallback', e.message); }
+        }
+        // Local fallback
+        p.receiveChange(amt);
+        if (p.demoMode && p.pendingChange != null) {
+          p.setMScreen('done');
+          p.setMCount(c=>c+1);
+          p.setMTotal(v=>+(v+amt).toFixed(2));
+          p.setPendingChange(null);
+        }
+        p.setScreen('success');
+      }} onBack={()=>p.setScreen('app')} />}
+      {screen === 'success' && <Success t={p.t} amount={p.lastReceive} onDone={()=>p.setScreen('app')} />}
+    </div>
+  );
+}
+
+function AppTabs(p) {
+  const { tab, setTab, t, rtl } = p;
+  return (
+    <div className="w-full h-full flex flex-col">
+      <div className="flex-1 overflow-y-auto hide-scroll pb-20">
+        {tab === 'home' && <Home {...p} />}
+        {tab === 'activity' && <Activity {...p} />}
+        {tab === 'savings' && <Savings {...p} />}
+        {tab === 'profile' && <Profile {...p} />}
+      </div>
+      <nav className="absolute bottom-0 inset-x-0 bg-white border-t border-slate-100 flex justify-around py-2 z-30">
+        {[
+          {id:'home', icon:I.home, label:t.tab_home},
+          {id:'activity', icon:I.list, label:t.tab_activity},
+          {id:'savings', icon:I.jar, label:t.tab_savings},
+          {id:'profile', icon:I.user, label:t.tab_profile},
+        ].map(n=>(
+          <button key={n.id} onClick={()=>setTab(n.id)} className={`flex flex-col items-center gap-0.5 px-3 py-1 ${tab===n.id?'text-teal-600':'text-slate-400'}`}>
+            {n.icon('w-5 h-5')}
+            <span className="text-[10px] font-semibold">{n.label}</span>
+          </button>
+        ))}
+      </nav>
+      {p.redeemOpen && <RedeemSheet {...p} />}
+    </div>
+  );
+}
+
+// ---------- Welcome ----------
+function Welcome({t, onNext}) {
+  return (
+    <div className="h-full flex flex-col p-8 pt-16 shine text-white fade-in">
+      <div className="flex-1 flex flex-col items-center justify-center">
+        <div className="w-24 h-24 rounded-3xl bg-white/15 backdrop-blur flex items-center justify-center mb-6 pop">
+          <div className="coin w-14 h-14 rounded-full shadow-inner flex items-center justify-center font-black text-amber-900 text-2xl">ف</div>
+        </div>
+        <h1 className="text-4xl font-black mb-3">{t.welcome_title}</h1>
+        <p className="text-white/80 text-base text-center leading-relaxed px-4 mb-8">{t.welcome_sub}</p>
+        <ul className="text-white/90 text-sm space-y-2 self-stretch">
+          {[t.feat1, t.feat2, t.feat3].map((f,i)=>(
+            <li key={i} className="flex items-center gap-3 bg-white/10 rounded-xl p-3">
+              <div className="w-6 h-6 rounded-full bg-amber-400 text-amber-900 flex items-center justify-center text-xs font-bold">✓</div>
+              <span>{f}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <button onClick={onNext} className="w-full bg-white text-teal-700 font-bold py-4 rounded-2xl shadow-lg hover:scale-[1.02] transition">
+        {t.get_started}
+      </button>
+    </div>
+  );
+}
+
+// ---------- OTP ----------
+function Otp({t, rtl, otp, setOtp, onNext, resetToWelcome}) {
+  const refs = [useRef(),useRef(),useRef(),useRef()];
+  const set = (i,v) => {
+    if (!/^\d?$/.test(v)) return;
+    const n = [...otp]; n[i]=v; setOtp(n);
+    if (v && i<3) refs[i+1].current?.focus();
+    if (n.every(x=>x)) setTimeout(onNext, 400);
+  };
+  return (
+    <div className="h-full flex flex-col p-6 pt-12 fade-in">
+      <button onClick={resetToWelcome} className="text-slate-400 text-sm mb-8 self-start">{rtl?'→ رجوع':'← Back'}</button>
+      <h2 className="text-2xl font-bold text-slate-800 mb-2">{t.otp_title}</h2>
+      <p className="text-slate-500 text-sm mb-10">{t.otp_sub}</p>
+      <div className="flex gap-3 justify-center mb-6" dir="ltr">
+        {otp.map((v,i)=>(
+          <input key={i} ref={refs[i]} value={v} onChange={e=>set(i,e.target.value)} maxLength={1} inputMode="numeric"
+            className="w-14 h-16 text-center text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-teal-600 outline-none"/>
+        ))}
+      </div>
+      <button className="text-teal-600 text-sm font-semibold">{t.resend}</button>
+      <div className="flex-1"></div>
+      <button onClick={onNext} disabled={!otp.every(x=>x)} className="w-full bg-teal-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold py-4 rounded-2xl">
+        {t.continue}
+      </button>
+    </div>
+  );
+}
+
+// ---------- Home ----------
+function Home({t, rtl, balance, savings, goal, points, today, tx, setScreen, setTab, setRedeemOpen, pendingChange, demoMode}) {
+  const jarPct = Math.min(100, (savings/goal)*100);
+  return (
+    <div className="fade-in">
+      {demoMode && pendingChange != null && (
+        <button onClick={()=>setScreen('scan')} className="w-full bg-amber-400 text-amber-950 pt-8 pb-3 px-4 flex flex-col items-center gap-0.5 hover:bg-amber-300 transition animate-pulse">
+          <span className="text-xs font-semibold flex items-center gap-1.5">💰 {t.incoming_title} · <span dir="ltr" className="font-black">{pendingChange.toFixed(2)} {t.jod}</span></span>
+          <span className="text-[10px] opacity-80">{t.incoming_sub}</span>
+        </button>
+      )}
+      <div className="shine text-white p-6 pb-10 pt-10">
+        <div className="flex justify-between items-start mb-6">
+          <p className="text-white/70 text-sm">{t.home_hi}</p>
+          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-bold">L</div>
+        </div>
+        <p className="text-white/70 text-xs uppercase tracking-wider">{t.home_balance}</p>
+        <div className="flex items-baseline gap-2 mt-1" dir="ltr">
+          <AnimNum value={balance} className="text-5xl font-black"/>
+          <span className="text-white/70 text-lg">{t.jod}</span>
+        </div>
+        <p className="text-amber-300 text-sm mt-1 font-semibold" dir="ltr">+{today.toFixed(2)} {t.jod} <span className="text-white/70 font-normal">{t.home_today}</span></p>
+      </div>
+
+      <div className="px-6 -mt-5 grid grid-cols-2 gap-3">
+        <button onClick={()=>setScreen('scan')} className="bg-white rounded-2xl p-4 shadow-md flex flex-col items-center gap-2 hover:shadow-lg transition">
+          <div className="w-11 h-11 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">{I.qr('w-6 h-6')}</div>
+          <span className="text-xs font-semibold text-slate-700 text-center">{t.scan_receive}</span>
+        </button>
+        <button onClick={()=>setScreen('pay')} className="bg-white rounded-2xl p-4 shadow-md flex flex-col items-center gap-2 hover:shadow-lg transition">
+          <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">{I.send('w-6 h-6')}</div>
+          <span className="text-xs font-semibold text-slate-700 text-center">{t.pay_with_frayt}</span>
+        </button>
+      </div>
+
+      <div className="px-6 mt-4 grid grid-cols-2 gap-3">
+        <button onClick={()=>setTab('savings')} className="bg-white rounded-2xl p-4 shadow-sm text-start">
+          <div className="flex items-center gap-2 mb-2 text-teal-700">
+            {I.jar('w-4 h-4')}
+            <span className="text-xs font-semibold">{t.savings_jar}</span>
+          </div>
+          <div className="relative h-14 bg-slate-100 rounded-lg overflow-hidden mb-2">
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-teal-500 to-teal-400 transition-all duration-1000" style={{height:`${jarPct}%`}}></div>
+          </div>
+          <p className="text-sm font-bold text-slate-800" dir="ltr">{savings.toFixed(2)} <span className="text-xs text-slate-500">{t.jod}</span></p>
+        </button>
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-2 text-amber-600">
+            {I.gift('w-4 h-4')}
+            <span className="text-xs font-semibold">{t.rewards_pts}</span>
+          </div>
+          <div className="h-14 flex items-center justify-center">
+            <span className="text-3xl font-black text-amber-500">{points}</span>
+          </div>
+          <button onClick={()=>setRedeemOpen(true)} className="w-full text-xs font-bold text-amber-600 bg-amber-50 py-1.5 rounded-lg">{t.redeem}</button>
+        </div>
+      </div>
+
+      <div className="px-6 mt-5 pb-6">
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">{t.recent}</p>
+        <div className="bg-white rounded-2xl shadow-sm divide-y divide-slate-100">
+          {tx.slice(0,3).map((x,i)=><TxRow key={i} x={x} t={t}/>)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TxRow({x, t}) {
+  const isIn = x.type==='in';
+  const isReward = x.type==='rewards';
+  const color = isIn ? 'teal' : isReward ? 'amber' : 'slate';
+  const icon = isIn ? I.qr : isReward ? I.gift : I.send;
+  return (
+    <div className="flex items-center justify-between p-3">
+      <div className="flex items-center gap-3">
+        <div className={`w-9 h-9 rounded-full bg-${color}-50 text-${color}-600 flex items-center justify-center`}>{icon('w-4 h-4')}</div>
+        <div>
+          <p className="text-sm font-semibold text-slate-800">{t[x.name] || x.name}</p>
+          <p className="text-xs text-slate-400">{t[x.time] || x.time}</p>
+        </div>
+      </div>
+      <p className={`text-sm font-bold ${isIn?'text-teal-600': isReward?'text-amber-600':'text-slate-700'}`} dir="ltr">
+        {isReward ? `${x.amt} ${t.pts}` : `${isIn?'+':''}${x.amt.toFixed(2)}`}
+      </p>
+    </div>
+  );
+}
+
+// ---------- Activity ----------
+function Activity({t, tx, filter, setFilter}) {
+  const filtered = tx.filter(x => filter==='all' || x.type===filter);
+  return (
+    <div className="fade-in">
+      <div className="p-6 pt-10 bg-white border-b border-slate-100">
+        <h2 className="text-2xl font-bold text-slate-800 mb-4">{t.activity_title}</h2>
+        <div className="flex gap-2 overflow-x-auto hide-scroll">
+          {[['all',t.filter_all],['in',t.filter_in],['rewards',t.filter_rewards]].map(([k,l])=>(
+            <button key={k} onClick={()=>setFilter(k)} className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap ${filter===k?'bg-teal-600 text-white':'bg-slate-100 text-slate-600'}`}>{l}</button>
+          ))}
+        </div>
+      </div>
+      {filtered.length ? (
+        <div className="p-4">
+          <div className="bg-white rounded-2xl shadow-sm divide-y divide-slate-100">
+            {filtered.map((x,i)=><TxRow key={i} x={x} t={t}/>)}
+          </div>
+        </div>
+      ) : (
+        <div className="p-10 text-center text-slate-400 text-sm">{t.no_tx}</div>
+      )}
+    </div>
+  );
+}
+
+// ---------- Savings ----------
+function Savings({t, rtl, savings, goal, tx}) {
+  const pct = Math.min(100, (savings/goal)*100);
+  const R = 70, C = 2*Math.PI*R;
+  const deposits = tx.filter(x => x.type==='in').slice(0,6);
+  return (
+    <div className="fade-in">
+      <div className="p-6 pt-10 bg-white">
+        <h2 className="text-2xl font-bold text-slate-800 mb-6">{t.savings_title}</h2>
+        <div className="flex flex-col items-center">
+          <svg width="180" height="180" viewBox="0 0 180 180">
+            <circle cx="90" cy="90" r={R} className="ring-bg" strokeWidth="14" fill="none"/>
+            <circle cx="90" cy="90" r={R} className="ring-fg" strokeWidth="14" fill="none" strokeLinecap="round"
+              strokeDasharray={C} strokeDashoffset={C - (pct/100)*C}
+              transform="rotate(-90 90 90)"/>
+            <text x="90" y="86" textAnchor="middle" fontSize="28" fontWeight="800" fill="#0F766E">{savings.toFixed(2)}</text>
+            <text x="90" y="108" textAnchor="middle" fontSize="11" fill="#64748B">{t.savings_of} {goal.toFixed(2)} {t.jod}</text>
+          </svg>
+          <div className="mt-4 px-4 py-2 bg-teal-50 rounded-full text-xs font-semibold text-teal-700">🎯 {t.goal_label}</div>
+        </div>
+      </div>
+      <div className="p-6">
+        <div className="bg-white rounded-2xl p-4 shadow-sm mb-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">{t.auto_save}</p>
+            <p className="text-xs text-slate-500 mt-1">50% of received change</p>
+          </div>
+          <div className="w-11 h-6 bg-teal-600 rounded-full relative">
+            <div className="absolute top-0.5 right-0.5 w-5 h-5 bg-white rounded-full shadow"></div>
+          </div>
+        </div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">{t.deposit_history}</p>
+        <div className="bg-white rounded-2xl shadow-sm divide-y divide-slate-100">
+          {deposits.length ? deposits.map((x,i)=>(
+            <div key={i} className="flex items-center justify-between p-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center">{I.jar('w-4 h-4')}</div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">{t[x.name] || x.name}</p>
+                  <p className="text-xs text-slate-400">{t[x.time] || x.time}</p>
+                </div>
+              </div>
+              <p className="text-sm font-bold text-teal-600" dir="ltr">+{(x.amt/2).toFixed(2)}</p>
+            </div>
+          )) : <div className="p-6 text-center text-slate-400 text-sm">{t.no_tx}</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Profile ----------
+function Profile({t, rtl, lang, setLang, resetToWelcome}) {
+  const rows = [
+    {label: t.p_phone, val:'+962 79 ••• 4821', icon:'📱'},
+    {label: t.p_lang, val: lang==='en'?'English':'العربية', icon:'🌐', onClick:()=>setLang(lang==='en'?'ar':'en')},
+    {label: t.p_help, val:'', icon:'❓'},
+  ];
+  return (
+    <div className="fade-in">
+      <div className="p-6 pt-10 bg-white text-center border-b border-slate-100">
+        <div className="w-20 h-20 rounded-full shine text-white flex items-center justify-center text-3xl font-black mx-auto mb-3">L</div>
+        <h2 className="text-xl font-bold text-slate-800">{t.home_hi.replace('Hello, ','').replace('مرحبًا، ','')}</h2>
+        <p className="text-xs text-slate-500 mt-1">+962 79 ••• 4821</p>
+      </div>
+      <div className="p-6 space-y-2">
+        {rows.map((r,i)=>(
+          <button key={i} onClick={r.onClick} className="w-full bg-white rounded-2xl shadow-sm p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-xl">{r.icon}</span>
+              <span className="text-sm font-semibold text-slate-800">{r.label}</span>
+            </div>
+            <span className="text-sm text-slate-500">{r.val}</span>
+          </button>
+        ))}
+        <button onClick={resetToWelcome} className="w-full mt-4 bg-white rounded-2xl shadow-sm p-4 text-red-600 font-semibold text-sm">
+          {t.p_logout}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Redeem Sheet ----------
+function RedeemSheet({t, points, setRedeemOpen, redeem}) {
+  const rewards = [
+    {cost:200, icon:I.coffee('w-6 h-6'), name:t.reward_coffee, key:'reward_coffee', apiKey:'coffee', color:'amber'},
+    {cost:150, icon:I.ticket('w-6 h-6'), name:t.reward_voucher, key:'reward_voucher', apiKey:'voucher', color:'teal'},
+    {cost:300, icon:I.percent('w-6 h-6'), name:t.reward_discount, key:'reward_discount', apiKey:'discount', color:'indigo'},
+    {cost:100, icon:I.heart('w-6 h-6'), name:t.reward_charity, key:'reward_charity', apiKey:'charity', color:'rose'},
+  ];
+  return (
+    <div className="absolute inset-0 bg-black/50 z-40 flex items-end" onClick={()=>setRedeemOpen(false)}>
+      <div className="bg-white w-full rounded-t-3xl p-6 slide-up" onClick={e=>e.stopPropagation()}>
+        <div className="w-12 h-1 bg-slate-200 rounded-full mx-auto mb-4"></div>
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h3 className="font-bold text-slate-800">{t.redeem_title}</h3>
+            <p className="text-xs text-slate-500">{t.redeem_sub}: <span className="text-amber-600 font-bold">{points} {t.pts}</span></p>
+          </div>
+          <button onClick={()=>setRedeemOpen(false)} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">{I.close('w-4 h-4')}</button>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {rewards.map(r=>{
+            const can = points >= r.cost;
+            return (
+              <button key={r.key} onClick={()=>redeem(r.cost, r.key, r.apiKey)} disabled={!can}
+                className={`p-4 rounded-2xl border-2 text-start ${can?'border-slate-200 hover:border-teal-400 bg-white':'border-slate-100 bg-slate-50 opacity-50'}`}>
+                <div className={`w-10 h-10 rounded-xl bg-${r.color}-50 text-${r.color}-600 flex items-center justify-center mb-2`}>{r.icon}</div>
+                <p className="text-sm font-semibold text-slate-800">{r.name}</p>
+                <p className="text-xs text-amber-600 font-bold mt-1">{r.cost} {t.pts}</p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Scan ----------
+function Scan({t, onScan, onBack, qrDataUrl}) {
+  return (
+    <div className="h-full bg-slate-900 text-white flex flex-col fade-in">
+      <div className="p-5 flex justify-between items-center">
+        <button onClick={onBack} className="text-white/70 text-xl">✕</button>
+        <p className="text-sm font-semibold">Frayt</p>
+        <div className="w-6"></div>
+      </div>
+      <div className="flex-1 flex flex-col items-center justify-center">
+        <div className="relative">
+          <div className="absolute inset-0 pulse-ring border-4 border-teal-400 rounded-3xl"></div>
+          <div className="bg-white p-4 rounded-3xl shadow-2xl relative">
+            {qrDataUrl
+              ? <img src={qrDataUrl} onClick={onScan} width={220} height={220} className="cursor-pointer" alt="QR"/>
+              : <MockQR size={220} onClick={onScan}/>}
+          </div>
+        </div>
+        <p className="mt-8 text-center text-white/80 text-sm px-8">{t.scan_title}</p>
+        <p className="mt-2 text-xs text-teal-300">{t.scan_hint}</p>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Success ----------
+function Success({t, amount, onDone}) {
+  useEffect(()=>{ const id = setTimeout(onDone, 2800); return ()=>clearTimeout(id); }, []);
+  return (
+    <div className="h-full flex flex-col items-center justify-center p-8 bg-gradient-to-b from-teal-50 to-white fade-in">
+      <div className="w-28 h-28 rounded-full bg-teal-600 flex items-center justify-center pop mb-6 shadow-2xl">
+        {I.check('w-14 h-14 text-white')}
+      </div>
+      <h2 className="text-2xl font-bold text-slate-800 mb-2">{t.success_title}</h2>
+      <div className="text-5xl font-black text-teal-600 my-4 pop" dir="ltr">+{amount.toFixed(2)} <span className="text-2xl">{t.jod}</span></div>
+      <p className="text-slate-500 text-sm">{t.success_sub}</p>
+      <button onClick={onDone} className="mt-10 bg-teal-600 text-white font-bold px-10 py-3 rounded-2xl">{t.back_home}</button>
+    </div>
+  );
+}
+
+// ---------- Pay Flow (bill pay via eFAWATEERcom-style) ----------
+const CATS = [
+  {id:'electricity', icon:'⚡', color:'amber'},
+  {id:'water', icon:'💧', color:'sky'},
+  {id:'mobile', icon:'📱', color:'violet'},
+  {id:'internet', icon:'🌐', color:'teal'},
+  {id:'education', icon:'🎓', color:'rose'},
+  {id:'government', icon:'🏛️', color:'slate'},
+];
+
+// Due-date helper: computes days diff from today
+function dueMeta(dueDateStr, t) {
+  if (!dueDateStr) return null;
+  const due = new Date(dueDateStr + 'T00:00:00');
+  const now = new Date(); now.setHours(0,0,0,0);
+  const days = Math.floor((due - now) / 86400000);
+  if (days < 0) return { tone:'red', label:t.pay_due_overdue, bg:'bg-red-100 text-red-700' };
+  if (days === 0) return { tone:'red', label:t.pay_due_today, bg:'bg-red-100 text-red-700' };
+  if (days <= 3) return { tone:'amber', label:`${t.pay_due_soon} · ${days} ${t.pay_days_left}`, bg:'bg-amber-100 text-amber-800' };
+  return { tone:'green', label:`${days} ${t.pay_days_left}`, bg:'bg-emerald-50 text-emerald-700' };
+}
+
+function PayFlow({t, rtl, lang, balance, setBalance, setTx, setScreen, apiOnline, token}) {
+  const [step, setStep] = useState('categories');
+  const [billers, setBillers] = useState([]);
+  const [saved, setSaved] = useState([]);
+  const [recent, setRecent] = useState([]);
+  const [category, setCategory] = useState(null);
+  const [biller, setBiller] = useState(null);
+  const [reference, setReference] = useState('');
+  const [bill, setBill] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [search, setSearch] = useState('');
+  const [nickname, setNickname] = useState('');
+  const [savedOk, setSavedOk] = useState(false);
+  const refInput = useRef(null);
+
+  const nameKey = lang === 'ar' ? 'name_ar' : 'name_en';
+  const labelKey = lang === 'ar' ? 'ref_label_ar' : 'ref_label_en';
+
+  // Load billers + saved + recent on mount
+  useEffect(() => {
+    if (!apiOnline) {
+      setBillers([
+        {id:1, category:'electricity', name_en:'JEPCO', name_ar:'شركة الكهرباء', icon:'⚡', ref_label_en:'Meter number', ref_label_ar:'رقم العداد'},
+        {id:5, category:'mobile', name_en:'Zain', name_ar:'زين', icon:'📱', ref_label_en:'Mobile number', ref_label_ar:'رقم الهاتف'},
+        {id:3, category:'water', name_en:'Miyahuna', name_ar:'مياهنا', icon:'💧', ref_label_en:'Subscription', ref_label_ar:'رقم الاشتراك'},
+      ]);
+      return;
+    }
+    api.billers().then(d => setBillers(d.billers || [])).catch(()=>{});
+    if (token) {
+      api.savedBillers(token).then(d => setSaved(d.saved || [])).catch(()=>{});
+      api.recentBills(token).then(d => setRecent(d.recent || [])).catch(()=>{});
+    }
+  }, [apiOnline, token]);
+
+  // Auto-focus reference input on step change
+  useEffect(() => { if (step === 'reference') setTimeout(() => refInput.current?.focus(), 60); }, [step]);
+
+  const catBillers = billers.filter(b => b.category === category && (!search.trim() || b[nameKey].toLowerCase().includes(search.toLowerCase())));
+
+  const lookupBill = async (billerArg, refArg) => {
+    const b = billerArg || biller;
+    const r = (refArg ?? reference).trim();
+    if (!r || !b) return;
+    setLoading(true); setError(null);
+    if (apiOnline && token) {
+      try {
+        const res = await api.billLookup(b.id, r, token);
+        setBill(res);
+        setBiller(b); setReference(r);
+        setStep('confirm');
+      } catch (e) { setError(e.message); }
+    } else {
+      const hash = [...r].reduce((a,c)=>a+c.charCodeAt(0), 0);
+      const base = { electricity:28, water:12, mobile:8, internet:22, education:320, government:45 }[b.category] || 20;
+      const amount = +((base + (hash%30) - 5 + (hash%100)/100).toFixed(2));
+      const dueDate = new Date(Date.now() + (7+(hash%20))*86400000).toISOString().slice(0,10);
+      setBill({ billId:'mock-'+Date.now(), biller:{name_en:b.name_en, name_ar:b.name_ar, icon:b.icon, category:b.category}, reference:r, amount, dueDate });
+      setBiller(b); setReference(r);
+      setStep('confirm');
+    }
+    setLoading(false);
+  };
+
+  const payBill = async () => {
+    if (!bill) return;
+    setLoading(true); setError(null);
+    if (apiOnline && token) {
+      try {
+        const r = await api.billPay(bill.billId, token);
+        setBalance(r.wallet.balance);
+        setTx(arr => [{type:'out', name:r.biller, amt:-bill.amount, time:'tx_just'}, ...arr]);
+        api.recentBills(token).then(d => setRecent(d.recent || [])).catch(()=>{});
+        setStep('paid');
+      } catch (e) { setError(e.message); setLoading(false); return; }
+    } else {
+      if (balance < bill.amount) { setError(t.pay_insufficient); setLoading(false); return; }
+      setBalance(b => +(b-bill.amount).toFixed(2));
+      setTx(arr => [{type:'out', name:bill.biller.name_en, amt:-bill.amount, time:'tx_just'}, ...arr]);
+      setStep('paid');
+    }
+    setLoading(false);
+  };
+
+  const isAlreadySaved = bill && saved.some(s => s.billerId === (bill.billerId || biller?.id) && s.reference === bill.reference);
+  const saveCurrentBiller = async () => {
+    if (!apiOnline || !token || !bill || !nickname.trim()) return;
+    try {
+      await api.saveBiller(bill.billerId || biller.id, nickname.trim(), bill.reference, token);
+      const d = await api.savedBillers(token);
+      setSaved(d.saved || []);
+      setSavedOk(true);
+      setTimeout(()=>setSavedOk(false), 2500);
+      setNickname('');
+    } catch (e) { setError(e.message); }
+  };
+
+  const removeSaved = async (id) => {
+    if (!apiOnline || !token) return;
+    await api.deleteSavedBiller(id, token).catch(()=>{});
+    setSaved(s => s.filter(x => x.id !== id));
+  };
+
+  const payFromSaved = (s) => {
+    const b = billers.find(x => x.id === s.billerId) || { id:s.billerId, name_en:s.name_en, name_ar:s.name_ar, icon:s.icon, category:s.category, ref_label_en:s.ref_label_en, ref_label_ar:s.ref_label_ar };
+    lookupBill(b, s.reference);
+  };
+
+  const payFromRecent = (r) => {
+    const b = billers.find(x => x.id === r.billerId) || { id:r.billerId, name_en:r.name_en, name_ar:r.name_ar, icon:r.icon, category:r.category };
+    lookupBill(b, r.reference);
+  };
+
+  const exit = () => setScreen('app');
+  const Header = ({title, onBack}) => (
+    <div className="flex items-center gap-3 p-5 pt-12 border-b border-slate-100 bg-white">
+      <button onClick={onBack} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">{rtl?'→':'←'}</button>
+      <h2 className="text-lg font-bold text-slate-800">{title}</h2>
+    </div>
+  );
+
+  const due = bill ? dueMeta(bill.dueDate, t) : null;
+
+  return (
+    <div className="h-full bg-slate-50 overflow-y-auto hide-scroll">
+      <div key={step} className="fade-in">
+        {step === 'categories' && (
+          <div>
+            <Header title={t.pay_title} onBack={exit}/>
+            <div className="p-5 space-y-5">
+
+              {saved.length > 0 && (
+                <section>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">{t.pay_saved}</p>
+                  <div className="flex gap-2 overflow-x-auto hide-scroll -mx-1 px-1 pb-1">
+                    {saved.map(s => (
+                      <div key={s.id} className="shrink-0 w-36 bg-white rounded-2xl p-3 shadow-sm relative group">
+                        <button onClick={()=>payFromSaved(s)} className="w-full text-start">
+                          <div className="text-2xl mb-1.5">{s.icon}</div>
+                          <p className="text-xs font-bold text-slate-800 truncate">{s.nickname}</p>
+                          <p className="text-[10px] text-slate-500 truncate" dir="ltr">{s.reference}</p>
+                        </button>
+                        <button onClick={(e)=>{ e.stopPropagation(); removeSaved(s.id); }}
+                          className="absolute top-1.5 end-1.5 w-5 h-5 rounded-full bg-slate-100 hover:bg-red-100 text-slate-400 hover:text-red-600 text-[10px] flex items-center justify-center">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {recent.length > 0 && (
+                <section>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">{t.pay_recent}</p>
+                  <div className="bg-white rounded-2xl shadow-sm divide-y divide-slate-100">
+                    {recent.slice(0,3).map(r => (
+                      <button key={r.id} onClick={()=>payFromRecent(r)} className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 text-start">
+                        <div className="text-xl">{r.icon}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-slate-800 truncate">{r[nameKey]}</p>
+                          <p className="text-xs text-slate-500 truncate" dir="ltr">{r.reference}</p>
+                        </div>
+                        <span className="text-xs font-bold text-teal-600" dir="ltr">{r.amount.toFixed(2)} {t.jod}</span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              <section>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">{t.pay_all_cats}</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {CATS.map(c => (
+                    <button key={c.id} onClick={()=>{ setCategory(c.id); setSearch(''); setStep('billers'); }}
+                      className="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition text-start">
+                      <div className="text-3xl mb-2">{c.icon}</div>
+                      <p className="text-sm font-bold text-slate-800">{t['cat_'+c.id]}</p>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <div className="bg-teal-50 rounded-2xl p-4 flex items-center justify-between">
+                <span className="text-xs font-semibold text-teal-700">{t.pay_balance}</span>
+                <span className="text-lg font-black text-teal-700" dir="ltr">{balance.toFixed(2)} {t.jod}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === 'billers' && (
+          <div>
+            <Header title={t['cat_'+category]} onBack={()=>setStep('categories')}/>
+            <div className="p-5">
+              <div className="relative mb-4">
+                <span className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400">🔎</span>
+                <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={t.pay_search}
+                  className="w-full bg-white border border-slate-200 rounded-2xl py-3 ps-10 pe-4 text-sm outline-none focus:border-teal-500"/>
+              </div>
+              <div className="space-y-2">
+                {catBillers.map(b => (
+                  <button key={b.id} onClick={()=>{ setBiller(b); setReference(''); setStep('reference'); }}
+                    className="w-full bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3 hover:shadow-md transition">
+                    <div className="text-2xl">{b.icon}</div>
+                    <span className="flex-1 text-start text-sm font-bold text-slate-800">{b[nameKey]}</span>
+                    <span className="text-slate-300 text-lg">{rtl?'‹':'›'}</span>
+                  </button>
+                ))}
+                {!catBillers.length && <p className="text-center text-slate-400 text-sm py-8">—</p>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === 'reference' && biller && (
+          <div>
+            <Header title={biller[nameKey]} onBack={()=>setStep('billers')}/>
+            <div className="p-5">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-teal-50 flex items-center justify-center text-2xl">{biller.icon}</div>
+                <div>
+                  <p className="text-xs text-slate-500">{t['cat_'+biller.category]}</p>
+                  <p className="text-sm font-bold text-slate-800">{biller[nameKey]}</p>
+                </div>
+              </div>
+              <label className="text-xs font-semibold text-slate-500 mb-2 block">{biller[labelKey]}</label>
+              <input ref={refInput} value={reference} onChange={e=>setReference(e.target.value)}
+                onKeyDown={e=>{ if (e.key==='Enter') lookupBill(); }}
+                inputMode="numeric" placeholder={t.pay_ref_placeholder}
+                className="w-full bg-white border-2 border-slate-200 rounded-2xl p-4 text-base font-semibold outline-none focus:border-teal-500 tracking-wider" dir="ltr"/>
+              {error && <p className="mt-3 text-xs text-red-600">{error}</p>}
+              {loading && (
+                <div className="mt-4 bg-white rounded-2xl p-4 shadow-sm animate-pulse">
+                  <div className="h-3 bg-slate-200 rounded w-1/2 mb-2"></div>
+                  <div className="h-6 bg-slate-200 rounded w-2/3"></div>
+                </div>
+              )}
+              <button onClick={()=>lookupBill()} disabled={!reference.trim() || loading}
+                className="w-full mt-6 bg-teal-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold py-4 rounded-2xl">
+                {loading ? t.pay_fetching : t.pay_fetch}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 'confirm' && bill && (
+          <div>
+            <Header title={t.pay_title} onBack={()=>setStep('reference')}/>
+            <div className="p-5">
+              <div className="bg-white rounded-3xl shadow-sm p-6 text-center">
+                <div className="text-5xl mb-3">{bill.biller.icon}</div>
+                <p className="text-sm font-bold text-slate-800">{bill.biller[nameKey] || bill.biller.name_en}</p>
+                <p className="text-xs text-slate-500 mt-1" dir="ltr">{bill.reference}</p>
+                <div className="my-6 py-6 border-y border-slate-100">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">{t.pay_bill_amount}</p>
+                  <p className="text-4xl font-black text-slate-800" dir="ltr">{bill.amount.toFixed(2)} <span className="text-xl text-slate-500">{t.jod}</span></p>
+                  <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
+                    <span className="text-xs text-slate-500">{t.pay_due}: <span dir="ltr">{bill.dueDate}</span></span>
+                    {due && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${due.bg}`}>{due.label}</span>}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500">{t.pay_balance}</span>
+                  <span className="font-bold text-teal-700" dir="ltr">{balance.toFixed(2)} {t.jod}</span>
+                </div>
+              </div>
+              {error && <p className="mt-3 text-xs text-red-600 text-center">{error}</p>}
+              <button onClick={payBill} disabled={loading || balance < bill.amount}
+                className="w-full mt-6 bg-teal-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold py-4 rounded-2xl">
+                {loading ? '...' : balance < bill.amount ? t.pay_insufficient : t.pay_pay_now}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 'paid' && bill && (
+          <div className="h-full flex flex-col items-center p-6 pt-10 bg-gradient-to-b from-teal-50 to-white">
+            <div className="w-20 h-20 rounded-full bg-teal-600 flex items-center justify-center pop mb-3 shadow-2xl">
+              {I.check('w-10 h-10 text-white')}
+            </div>
+            <h2 className="text-lg font-bold text-slate-800 mb-3">{t.pay_success}</h2>
+            <div className="bg-white rounded-2xl shadow-sm p-4 w-full max-w-xs">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 text-center">{t.pay_receipt}</p>
+              <div className="flex justify-between text-sm py-0.5"><span className="text-slate-500">{bill.biller[nameKey] || bill.biller.name_en}</span><span className="font-bold text-slate-800" dir="ltr">{bill.amount.toFixed(2)} {t.jod}</span></div>
+              <div className="flex justify-between text-sm py-0.5"><span className="text-slate-500">{biller?.[labelKey] || ''}</span><span className="text-slate-700 truncate ms-2" dir="ltr">{bill.reference}</span></div>
+              <div className="flex justify-between text-sm py-0.5 pt-2 border-t border-slate-100 mt-1"><span className="text-slate-500">{t.pay_balance}</span><span className="font-bold text-teal-700" dir="ltr">{balance.toFixed(2)} {t.jod}</span></div>
+            </div>
+
+            {apiOnline && !isAlreadySaved && !savedOk && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 w-full max-w-xs mt-3">
+                <p className="text-xs font-bold text-amber-800 mb-2">💾 {t.pay_save_q}</p>
+                <input value={nickname} onChange={e=>setNickname(e.target.value)} placeholder={t.pay_nickname}
+                  className="w-full border border-amber-200 rounded-lg p-2 text-xs bg-white outline-none focus:border-amber-500"/>
+                <button onClick={saveCurrentBiller} disabled={!nickname.trim()}
+                  className="w-full mt-2 bg-amber-500 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold py-2 rounded-lg text-xs">
+                  {t.pay_save_btn}
+                </button>
+              </div>
+            )}
+            {isAlreadySaved && <p className="text-xs text-emerald-600 font-semibold mt-3">✓ {t.pay_already_saved}</p>}
+            {savedOk && <p className="text-xs text-emerald-600 font-semibold mt-3 pop">{t.pay_saved_ok}</p>}
+
+            <div className="mt-4 space-y-2 w-full max-w-xs">
+              <button onClick={()=>{ setStep('categories'); setBill(null); setBiller(null); setReference(''); setError(null); setNickname(''); }} className="w-full bg-teal-600 text-white font-bold py-3 rounded-2xl">{t.pay_new}</button>
+              <button onClick={exit} className="w-full bg-slate-100 text-slate-700 font-semibold py-3 rounded-2xl">{t.pay_back_home}</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------- Merchant ----------
+function MerchantFlow({t, rtl, mScreen, setMScreen, amount, setAmount, paid, setPaid, change, mCount, setMCount, mTotal, setMTotal, demoMode, setPendingChange, apiOnline, setQrId, setQrDataUrl, qrDataUrl}) {
+  const onComplete = () => {
+    setMCount(c => c+1);
+    setMTotal(v => +(v+change).toFixed(2));
+  };
+  const onGenerate = async () => {
+    if (apiOnline && setQrId) {
+      try {
+        const r = await api.merchantQr(amount, paid);
+        setQrId(r.qrId);
+        setQrDataUrl(r.qrDataUrl);
+      } catch (e) { console.warn('merchant/qr failed', e.message); }
+    }
+    if (demoMode && setPendingChange) setPendingChange(change);
+    setMScreen('qr');
+  };
+  return (
+    <div className="w-full h-full bg-slate-50 relative overflow-hidden">
+      {mScreen === 'amount' && (
+        <div className="h-full flex flex-col p-6 pt-12 fade-in">
+          <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">{t.m_title}</p>
+          <h2 className="text-xl font-bold text-slate-800 mb-6">{t.m_store} ☕</h2>
+
+          {/* Today's summary */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm mb-5 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.m_today}</p>
+              <p className="text-xs text-slate-600"><span className="font-bold text-teal-700">{mCount}</span> {t.m_count} · <span className="font-bold text-teal-700" dir="ltr">{mTotal.toFixed(2)}</span> {t.jod} {t.m_total}</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">{I.qr('w-5 h-5')}</div>
+          </div>
+
+          <label className="text-xs font-semibold text-slate-500 mb-2">{t.m_amount}</label>
+          <div className="bg-white rounded-2xl p-4 shadow-sm mb-4 flex items-center gap-2" dir="ltr">
+            <input type="text" value={amount} onChange={e=>setAmount(e.target.value)}
+              className="flex-1 text-3xl font-bold text-slate-800 outline-none bg-transparent min-w-0"/>
+            <span className="text-slate-400 font-semibold text-sm">{t.jod}</span>
+          </div>
+
+          <label className="text-xs font-semibold text-slate-500 mb-2">{t.m_paid}</label>
+          <div className="bg-white rounded-2xl p-4 shadow-sm mb-4 flex items-center gap-2" dir="ltr">
+            <input type="text" value={paid} onChange={e=>setPaid(e.target.value)}
+              className="flex-1 text-3xl font-bold text-slate-800 outline-none bg-transparent min-w-0"/>
+            <span className="text-slate-400 font-semibold text-sm">{t.jod}</span>
+          </div>
+
+          <div className="bg-teal-50 border border-teal-200 rounded-2xl p-4 mb-6">
+            <p className="text-xs font-semibold text-teal-700 mb-1">{t.m_change}</p>
+            <p className="text-3xl font-black text-teal-700" dir="ltr">{change.toFixed(2)} <span className="text-lg">{t.jod}</span></p>
+          </div>
+
+          <div className="flex-1"></div>
+          <button onClick={onGenerate} disabled={change<=0}
+            className="w-full bg-teal-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold py-4 rounded-2xl shadow-lg">
+            {t.m_generate}
+          </button>
+        </div>
+      )}
+
+      {mScreen === 'qr' && (
+        <div className="h-full flex flex-col p-6 pt-10 fade-in items-center">
+          <button onClick={()=>{ if (demoMode && setPendingChange) setPendingChange(null); if (setQrId) { setQrId(null); setQrDataUrl(null); } setMScreen('amount'); }} className="self-start text-slate-400 text-sm mb-4">{rtl?'→ رجوع':'← Back'}</button>
+          <p className="text-xs text-slate-500 uppercase tracking-wider">{t.m_change}</p>
+          <p className="text-4xl font-black text-teal-700 my-2" dir="ltr">{change.toFixed(2)} {t.jod}</p>
+          <div className="relative mt-6">
+            <div className="absolute inset-0 pulse-ring border-4 border-teal-400 rounded-3xl"></div>
+            <div className="bg-white p-4 rounded-3xl shadow-xl border-2 border-slate-100">
+              {qrDataUrl ? <img src={qrDataUrl} width={220} height={220} alt="QR"/> : <MockQR size={220}/>}
+            </div>
+          </div>
+          <p className="mt-6 text-sm text-slate-500">{t.m_waiting}</p>
+          <div className="flex-1"></div>
+          {!demoMode && (
+            <button onClick={()=>{ onComplete(); setMScreen('done'); }} className="w-full bg-slate-100 text-slate-700 font-semibold py-3 rounded-2xl text-sm">
+              {t.m_simulate}
+            </button>
+          )}
+        </div>
+      )}
+
+      {mScreen === 'done' && (
+        <div className="h-full flex flex-col items-center justify-center p-8 bg-gradient-to-b from-teal-50 to-white fade-in">
+          <div className="w-28 h-28 rounded-full bg-teal-600 flex items-center justify-center pop mb-6 shadow-2xl">
+            {I.check('w-14 h-14 text-white')}
+          </div>
+          <h2 className="text-2xl font-bold text-slate-800 mb-2">{t.m_received}</h2>
+          <div className="text-5xl font-black text-teal-600 my-4 pop" dir="ltr">{change.toFixed(2)} <span className="text-2xl">{t.jod}</span></div>
+          <button onClick={()=>setMScreen('amount')} className="mt-10 bg-teal-600 text-white font-bold px-10 py-3 rounded-2xl">{t.m_new_tx}</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

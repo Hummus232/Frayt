@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: frayt-api
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DEMO_MODE
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: MERCHANT_API_KEY
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        sync: false          # you'll set this in the dashboard after Netlify is live
+      - key: DEV_OTP
+        value: "1234"
