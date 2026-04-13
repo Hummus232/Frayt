@@ -20,16 +20,14 @@ const MERCHANT_API_KEY = process.env.MERCHANT_API_KEY || (DEMO_MODE ? 'demo-merc
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:8765,http://127.0.0.1:8765').split(',').map(s => s.trim());
 
 // Fail fast in production if secrets aren't set
-if (NODE_ENV === 'production') {                                             
-    if (!JWT_SECRET || JWT_SECRET.includes('do-not-use')) {       
-  console.error('FATAL: JWT_SECRET must be set in production');                
-  process.exit(1); }                                              
-    if (!MERCHANT_API_KEY) { console.error('FATAL: MERCHANT_API_KEY must be set
-   in production'); process.exit(1); }                                         
-    if (DEMO_MODE) { console.warn('⚠️   WARNING: DEMO_MODE is enabled in 
-  production. OTP is exposed via API. Acceptable for demo/pitch, NOT for real  
-  users.'); }                                                                  
-  }
+if (NODE_ENV === 'production') {                                
+    if (!JWT_SECRET || JWT_SECRET.includes('do-not-use')) {                    
+  console.error('JWT_SECRET not set'); process.exit(1); }                      
+    if (!MERCHANT_API_KEY) { console.error('MERCHANT_API_KEY not set');        
+  process.exit(1); }                                                           
+    if (DEMO_MODE) { console.warn('WARNING: DEMO_MODE is enabled in            
+  production'); }                             
+  }      
 
 
 // ---------- Input validators ----------
